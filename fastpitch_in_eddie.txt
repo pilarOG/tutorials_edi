@@ -1,0 +1,174 @@
+## Fast Pitch on Eddie
+
+## Log into Eddie from any informatics server (use your EASE password)
+
+ssh <user-name>@eddie.ecdf.ed.ac.uk
+
+## Go to your scratch disk space
+
+cd /exports/eddie/scratch/<user-name>
+
+## Load conda
+
+module load anaconda
+
+## Conda env
+
+mkdir conda_env
+
+## To make sure conda environments are in scratch disk, run:
+
+vim ~/.condarc
+
+## vim will open the file, you can edit it by pressing "a"
+## modify the file to make it look like:
+
+```
+envs_dirs:
+  - /exports/eddie/scratch/<user-name>/conda_env/envs
+pkgs_dirs:
+  - /exports/eddie/scratch/<user-name>/conda_env/pkgs
+channels:
+  - defaults
+  - conda-forge
+```
+
+## press "escape", then ":wq" to save and close the file
+## Create environment
+
+conda create -n fp_venv python=3.8
+source activate fp_venv
+
+## GCC for apex
+
+conda install gcc_linux-64 gxx_linux-64
+alias gcc=x86_64-conda_cos6-linux-gnu-cc
+alias g++=x86_64-conda_cos6-linux-gnu-c++
+
+## Install torch
+
+module load cuda/11.0.2
+conda install pytorch cudatoolkit=11.0 -c pytorch
+
+## Install apex
+
+git clone https://github.com/NVIDIA/apex
+cd apex
+pip install -v --disable-pip-version-check --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./
+cd ..
+
+## Install FastPich dependencies
+
+git clone https://github.com/NVIDIA/DeepLearningExamples.git
+cd DeepLearningExamples/PyTorch/SpeechSynthesis/FastPitch/
+pip install -r requirements.txt
+pip install tqdm tensorboard
+pip install librosa
+pip install llvmlite==0.35.0
+pip install numba==0.49.1
+pip install nvidia-pyindex
+pip install nvidia-dlprof
+pip install nvidia_dlprof_pytorch_nvtx
+
+## Download dataset for tutorial
+
+bash scripts/download_dataset.sh
+
+## Download pretrained models
+
+bash scripts/download_fastpitch.sh
+bash scripts/download_waveglow.sh
+
+## Test training/inference runs
+
+## Get an interactive session
+
+qlogin -l h_rt=02:00:00 -pe gpu 1 -l h_vmem=16G
+
+## Go back to scratch disk
+cd /exports/eddie/scratch/<user-name>
+
+## Load modules, source environment
+module load anaconda
+source activate fp_venv
+module load cuda/11.0.2
+
+source /exports/applications/support/set_cuda_visible_devices.sh
+
+## Test inference with pretrained model
+
+mkdir output
+
+python inference.py --cuda \
+                    --fastpitch pretrained_models/fastpitch/nvidia_fastpitch_200518.pt \
+                    --waveglow pretrained_models/waveglow/nvidia_waveglow256pyt_fp16.pt \
+                    --wn-channels 256 \
+                    -i phrases/devset10.tsv \
+                    -o output/wavs_devset10
+
+## If that works, all the libraries should be installed correctly
+
+## Prepare training data, Tacotron 2 model is used to extract alignments
+
+bash scripts/download_tacotron2.sh
+bash scripts/prepare_dataset.sh
+
+## last command can take a little while as it is extracting features for the whole dataset
+
+## Test training within interactive session
+
+vim scripts/train.sh ## modify number of gpus to 1, epoch to 1
+bash scripts/train.sh
+
+# you can kill it with ctrl+c after checking a few iterations
+# you can leave the interactive session now (type exit)
+
+## Modify num_workers to zero in train.py
+
+## Write a job file, for example, to train
+
+vim train_job.sh
+
+# Jobs have three parts: headers, module loading, and the command you want to run
+
+```
+#!/bin/sh
+# Grid Engine options (lines prefixed with #$)
+#  job name: -N
+#$ -N test_fp_training
+# This is where the log files will be stored, in this case, the current directory
+#$ -cwd
+# Running time
+#$ -l h_rt=02:00:00
+#  (working) memory limit, the amount of memory you need may vary given your code and the amount of data
+#$ -l h_vmem=16G
+# GPU environment
+#$ -pe gpu 1
+
+# Load Anaconda environment and modules
+. /etc/profile.d/modules.sh
+module load anaconda
+source activate fp_venv
+module load cuda/11.0.2
+
+# Your python commands below...
+bash scripts/train.sh
+
+```
+## Submit the job to the queue
+qsub train_job.sh
+
+## Check status of your job
+qstat -u <student-number>
+
+## Kill a job
+qdel <job-identifier>
+
+# you can add "watch" at the beginning of that line to keep checking it
+
+## Copy folder back to a local computer
+# In your local afs run:
+
+scp -r <user-name>@eddie.ecdf.ed.ac.uk:<full-path-to-folder> .
+
+# the period at the end means "here", you can replace it with a path in your afs directories
