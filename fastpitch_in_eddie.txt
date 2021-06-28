@@ -37,7 +37,19 @@ channels:
 ## Create environment
 
 conda create -n fp_venv python=3.8
+
+## Get an interactive session
+
+qlogin -l h_rt=01:00:00 -pe gpu-titanx 1 -l h_vmem=8G
+
+
+## Go back to scratch disk, load modules and activate environment
+
+cd /exports/eddie/scratch/<user-name>
+module load anaconda
 source activate fp_venv
+module load cuda/11.0.2
+source /exports/applications/support/set_cuda_visible_devices.sh
 
 ## GCC for apex
 
@@ -47,7 +59,6 @@ alias g++=x86_64-conda_cos6-linux-gnu-c++
 
 ## Install torch
 
-module load cuda/11.0.2
 conda install pytorch cudatoolkit=11.0 -c pytorch
 
 ## Install apex
@@ -78,22 +89,6 @@ bash scripts/download_dataset.sh
 
 bash scripts/download_fastpitch.sh
 bash scripts/download_waveglow.sh
-
-## Test training/inference runs
-
-## Get an interactive session
-
-qlogin -l h_rt=02:00:00 -pe gpu 1 -l h_vmem=16G
-
-## Go back to scratch disk
-cd /exports/eddie/scratch/<user-name>
-
-## Load modules, source environment
-module load anaconda
-source activate fp_venv
-module load cuda/11.0.2
-
-source /exports/applications/support/set_cuda_visible_devices.sh
 
 ## Test inference with pretrained model
 
