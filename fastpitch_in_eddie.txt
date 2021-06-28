@@ -169,3 +169,5 @@ qdel <job-identifier>
 scp -r <user-name>@eddie.ecdf.ed.ac.uk:<full-path-to-folder> .
 
 # the period at the end means "here", you can replace it with a path in your afs directories
+
+# For more info about Eddie: https://www.wiki.ed.ac.uk/display/ResearchServices/Eddie
