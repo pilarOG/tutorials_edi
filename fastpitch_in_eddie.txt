@@ -118,11 +118,13 @@ bash scripts/train.sh
 # you can kill it with ctrl+c after checking a few iterations
 # you can leave the interactive session now (type exit)
 
-## Modify num_workers to zero in train.py
 
 ## Write a job file, for example, to train
 
 vim train_job.sh
+
+## Make sure to train with a batch size of 16 or less
+vim scripts/train.sh
 
 # Jobs have three parts: headers, module loading, and the command you want to run
 
